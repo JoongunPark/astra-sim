@@ -162,6 +162,10 @@ void Workload::issue_replay(shared_ptr<Chakra::ETFeederNode> node) {
     // chakra runtimes are in microseconds and we should convert it into
     // nanoseconds
     runtime = node->runtime() * 1000;
+  if (node->is_cpu_op())
+    hw_resource->tics_cpu_ops += runtime;
+  else
+    hw_resource->tics_gpu_ops += runtime;
   sys->register_event(this, EventType::General, wlhd, runtime);
 }
 
@@ -187,6 +191,10 @@ void Workload::issue_comp(shared_ptr<Chakra::ETFeederNode> node) {
     double perf = sys->roofline->get_perf(operational_intensity);
     double elapsed_time = static_cast<double>(node->num_ops()) / perf;
     uint64_t runtime = static_cast<uint64_t>(elapsed_time);
+    if (node->is_cpu_op())
+      hw_resource->tics_cpu_ops += runtime;
+    else
+      hw_resource->tics_gpu_ops += runtime;
     sys->register_event(this, EventType::General, wlhd, runtime);
   } else {
     // advance this node forward the recorded "replayed" time specificed in the
@@ -326,6 +334,7 @@ void Workload::call(EventType event, CallData* data) {
 
   if (event == EventType::CollectiveCommunicationFinished) {
     IntData* int_data = (IntData*)data;
+    hw_resource->tics_gpu_comms += int_data->execution_time;
     uint64_t node_id = collective_comm_node_id_map[int_data->data];
     shared_ptr<Chakra::ETFeederNode> node = et_feeder->lookupNode(node_id);
 
@@ -389,4 +398,5 @@ void Workload::fire() {
 void Workload::report() {
   Tick curr_tick = Sys::boostedTick();
   cout << "sys[" << sys->id << "] finished, " << curr_tick << " cycles" << endl;
+  hw_resource->report();
 }
