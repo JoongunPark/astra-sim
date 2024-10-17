@@ -234,7 +234,7 @@ void Workload::issue_comm(shared_ptr<Chakra::ETFeederNode> node) {
         // nanoseconds
         runtime = node->runtime() * 1000;
       DataSet* fp = new DataSet(1);
-      //fp->set_notifier(this, EventType::CollectiveCommunicationFinished);
+      fp->set_notifier(this, EventType::CollectiveCommunicationFinished);
       collective_comm_node_id_map[fp->my_id] = node->id();
       collective_comm_wrapper_map[fp->my_id] = fp;
       sys->register_event(
@@ -406,6 +406,7 @@ void Workload::call(EventType event, CallData* data) {
       (hw_resource->num_in_flight_gpu_comp_ops == 0) &&
       (hw_resource->num_in_flight_gpu_comm_ops == 0)) {
     report();
+    hw_resource->report();
     is_finished = true;
   }
 }
@@ -417,5 +418,4 @@ void Workload::fire() {
 void Workload::report() {
   Tick curr_tick = Sys::boostedTick();
   cout << "sys[" << sys->id << "] finished, " << curr_tick << " cycles" << endl;
-  hw_resource->report();
 }
